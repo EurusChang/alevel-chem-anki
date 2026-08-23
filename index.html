@@ -298,7 +298,10 @@ function wireSelectorBar(){
 /* =================== 概览 =================== */
 function vHome(){
   const deck = deckById(ui.deck);
-  if (!deck) return "<p>没有加载到任何卡组——检查 decks/ 目录。</p>";
+  if (!deck) return '<div class="h2">没有加载到卡组</div>' +
+    "<p>看起来只下载了 <b>index.html</b> 单个文件。卡片数据在 <b>decks/</b> 目录里，"+
+    "必须和 index.html 放在同一个文件夹。</p>" +
+    "<p>正确做法：回到仓库首页点 <b>Code → Download ZIP</b>，解压后双击里面的 index.html。</p>";
   const data = pdata();
   const cards = allCards(deck);
   let due = 0, fresh = 0, tiers = [0,0,0];

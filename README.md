@@ -2,7 +2,7 @@
 
 给 A-Level（爱德思 IAL）化学学生的**零依赖**本地刷卡工具：间隔重复闪卡 + 英文术语自测 + 知识地图 + 易错本。
 
-没有构建步骤、没有 npm、没有后端、不联网也能用——**下载后双击 `index.html`** 就开始复习。
+没有构建步骤、没有 npm、没有后端、不联网也能用——**下载整个仓库后双击 `index.html`** 就开始复习。
 
 ![概览](docs/home.png)
 
@@ -31,13 +31,17 @@ Anki 很好，但对 A-Level 学生有三个不合手的地方，这个工具就
 
 ## 快速开始
 
+> ⚠️ **要下载整个仓库，不能只下 `index.html`。** 卡片数据在 `decks/` 目录里，单独一个 HTML 文件打开会是空的。
+
+**方式一（推荐，不需要装任何东西）**：本页顶部绿色 **Code → Download ZIP**，解压，双击里面的 `index.html`。
+
+**方式二**：
+
 ```bash
 git clone https://github.com/EurusChang/alevel-chem-anki.git
 ```
 
-然后双击 `index.html`（Chrome / Safari / Edge 均可）。
-
-如果浏览器因本地文件安全策略拦住卡组加载，起个静态服务器即可：
+浏览器 Chrome / Safari / Edge 都可以。如果某个浏览器因本地文件安全策略拦住卡组加载，在仓库目录起个静态服务器：
 
 ```bash
 python3 -m http.server 8000
