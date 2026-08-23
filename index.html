@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>化学 Anki 复习台</title>
+<style>
+/* ============ 主题 tokens：亮色为基准，暗色两路覆盖 ============ */
+:root{
+  --bg:#F4F8F7; --card:#FFFFFF; --card2:#EDF3F2;
+  --ink:#1E2A2E; --ink2:#51636A; --mut:#7C8B90;
+  --acc:#0E5C63; --acc-ink:#FFFFFF; --acc-soft:#DCEBEC;
+  --good:#157F3D; --good-bg:#E8F5ED;
+  --warn:#B45309; --warn-bg:#FBF0E1;
+  --bad:#B4291E;
+  --tier1:#D7E8EA; --tier2:#6FAAB0; --tier3:#0E5C63;
+  --line:#D9E2E1; --shadow:0 1px 3px rgba(30,42,46,.08);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F191C; --card:#17262A; --card2:#1E3136;
+    --ink:#E4EEEC; --ink2:#A9BCBB; --mut:#7C9094;
+    --acc:#5FB3BB; --acc-ink:#0B1A1C; --acc-soft:#1E3A3E;
+    --good:#5DBB84; --good-bg:#173226;
+    --warn:#E0A254; --warn-bg:#3A2B14;
+    --bad:#E07A6E;
+    --tier1:#2E4E54; --tier2:#5E99A1; --tier3:#A6D3D8;
+    --line:#2B3E42; --shadow:0 1px 3px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F191C; --card:#17262A; --card2:#1E3136;
+  --ink:#E4EEEC; --ink2:#A9BCBB; --mut:#7C9094;
+  --acc:#5FB3BB; --acc-ink:#0B1A1C; --acc-soft:#1E3A3E;
+  --good:#5DBB84; --good-bg:#173226;
+  --warn:#E0A254; --warn-bg:#3A2B14;
+  --bad:#E07A6E;
+  --tier1:#2E4E54; --tier2:#5E99A1; --tier3:#A6D3D8;
+  --line:#2B3E42; --shadow:0 1px 3px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  font-size:15px; line-height:1.55; min-height:100vh;
+}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,select{font-family:inherit;font-size:14px;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px 10px}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+
+/* ============ 布局 ============ */
+.shell{display:flex;min-height:100vh}
+.side{width:196px;flex-shrink:0;padding:20px 12px;border-right:1px solid var(--line);
+  display:flex;flex-direction:column;gap:4px;position:sticky;top:0;height:100vh}
+.brand{padding:2px 10px 14px}
+.brand h1{font-size:17px;font-weight:700;color:var(--acc);letter-spacing:.5px}
+.brand small{color:var(--mut);font-size:11px;letter-spacing:1px}
+.nav-btn{display:flex;align-items:center;gap:9px;width:100%;text-align:left;
+  padding:9px 12px;border-radius:9px;font-size:14px;color:var(--ink2)}
+.nav-btn .ic{width:20px;text-align:center;font-size:15px}
+.nav-btn:hover{background:var(--card2)}
+.nav-btn.on{background:var(--acc);color:var(--acc-ink);font-weight:600}
+.side .foot{margin-top:auto;padding:10px;font-size:11px;color:var(--mut)}
+.main{flex:1;min-width:0;padding:22px clamp(14px,3.5vw,40px) 90px;max-width:1060px}
+@media(max-width:760px){
+  .shell{flex-direction:column}
+  .side{width:100%;height:auto;position:fixed;bottom:0;top:auto;z-index:50;
+    flex-direction:row;padding:6px 8px calc(6px + env(safe-area-inset-bottom));
+    border-right:none;border-top:1px solid var(--line);background:var(--card)}
+  .brand,.side .foot{display:none}
+  .nav-btn{flex-direction:column;gap:2px;padding:6px 2px;font-size:11px;flex:1;align-items:center}
+  .main{padding-bottom:110px}
+}
+
+/* ============ 通用组件 ============ */
+.h2{font-size:19px;font-weight:700;margin:2px 0 14px}
+.h3{font-size:15px;font-weight:700;color:var(--acc);margin:18px 0 8px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;box-shadow:var(--shadow)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:999px;
+  border:1px solid var(--line);background:var(--card);font-size:13px;color:var(--ink2)}
+.chip.on{background:var(--acc);border-color:var(--acc);color:var(--acc-ink);font-weight:600}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  padding:9px 18px;border-radius:10px;font-size:14px;font-weight:600;
+  background:var(--card2);color:var(--ink)}
+.btn:hover{filter:brightness(.97)}
+.btn.pri{background:var(--acc);color:var(--acc-ink)}
+.btn.sm{padding:5px 12px;font-size:13px;font-weight:500}
+.tag{display:inline-block;font-size:11px;padding:1px 8px;border-radius:999px;background:var(--acc-soft);color:var(--acc);margin-right:4px}
+.tag.warn{background:var(--warn-bg);color:var(--warn)}
+.mut{color:var(--mut);font-size:12.5px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+
+/* ============ 概览 ============ */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.kpi b{display:block;font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--acc)}
+.kpi span{font-size:12px;color:var(--mut)}
+.tbar{display:flex;height:14px;border-radius:7px;overflow:hidden;background:var(--card2);margin:5px 0 3px}
+.tbar i{display:block;height:100%;margin-right:2px}
+.tbar i:last-child{margin-right:0}
+.tbar .t1{background:var(--tier1)} .tbar .t2{background:var(--tier2)} .tbar .t3{background:var(--tier3)}
+.legend{display:flex;gap:14px;font-size:11.5px;color:var(--mut);margin-top:8px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+
+/* ============ 刷卡 ============ */
+.stage{max-width:640px;margin:0 auto}
+.fc{position:relative;background:var(--card);border:1px solid var(--line);border-radius:18px;
+  box-shadow:var(--shadow);min-height:300px;padding:26px 28px;display:flex;flex-direction:column;cursor:pointer}
+.fc .side-label{font-size:11px;letter-spacing:2px;color:var(--mut);text-transform:uppercase;margin-bottom:12px}
+.fc .qtext{font-size:18.5px;font-weight:650;line-height:1.6;text-wrap:balance;max-width:62ch}
+.fc .atext{font-size:15.5px;line-height:1.75;max-width:65ch;white-space:pre-wrap}
+.fc .atext .pt{display:block;margin:2px 0}
+.fc .atext .ok-line{color:var(--good)}
+.fc .atext .bad-line{color:var(--bad)}
+.fc .meta{margin-top:auto;padding-top:16px;display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--mut)}
+.grades{display:flex;gap:10px;margin-top:14px}
+.grades .btn{flex:1;padding:13px 6px;font-size:15px}
+.g-again{background:var(--warn-bg);color:var(--warn)}
+.g-hard{background:var(--card2)}
+.g-good{background:var(--good-bg);color:var(--good)}
+.sess-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;font-size:13px;color:var(--ink2)}
+.pbar{flex:1;height:6px;border-radius:3px;background:var(--card2);margin:0 12px;overflow:hidden}
+.pbar i{display:block;height:100%;background:var(--acc);border-radius:3px;transition:width .25s}
+.done-face{text-align:center;padding:46px 20px}
+.done-face .big{font-size:40px}
+kbd{background:var(--card2);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:11px;font-family:inherit}
+
+/* ============ 术语 ============ */
+.term-table{width:100%;border-collapse:collapse;font-size:14px}
+.term-table th{background:var(--acc);color:var(--acc-ink);text-align:left;padding:8px 12px;font-size:13px}
+.term-table th:first-child{border-radius:9px 0 0 0}.term-table th:last-child{border-radius:0 9px 0 0}
+.term-table td{padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+.term-table tr:nth-child(even) td{background:var(--card2)}
+.term-en{font-weight:650;white-space:nowrap}
+.term-def{color:var(--ink2);font-size:12.5px}
+.blindable.blind{position:relative}
+.blindable.blind>*{visibility:hidden}
+.blindable.blind::after{content:"点击显示";position:absolute;inset:4px;display:flex;align-items:center;justify-content:center;
+  background:var(--card2);border-radius:7px;color:var(--mut);font-size:12px;visibility:visible}
+.tbl-wrap{overflow-x:auto;border-radius:9px}
+
+/* ============ 知识地图 ============ */
+.map-topic{margin-bottom:18px}
+.map-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+.branch{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;box-shadow:var(--shadow)}
+.branch h4{font-size:13.5px;color:var(--acc);margin-bottom:7px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+.branch li{list-style:none;font-size:13px;padding:2.5px 0 2.5px 14px;position:relative;color:var(--ink2)}
+.branch li::before{content:"";position:absolute;left:2px;top:11px;width:5px;height:5px;border-radius:50%;background:var(--tier2)}
+.branch li.hot{color:var(--warn);font-weight:600}
+.branch li.hot::before{background:var(--warn)}
+.branch li.probe{cursor:pointer}
+.branch li.probe>span{border-bottom:1px dashed var(--acc)}
+.branch li.probe .pq-mark{color:var(--acc);font-weight:700;margin-left:4px;border:none}
+.branch li.probe:hover>span{border-bottom-style:solid}
+.probe-box{background:var(--card2);border-radius:8px;padding:9px 11px;margin:4px 0 7px}
+.probe-box::before{display:none}
+.probe-box .pq{font-size:12.5px;color:var(--ink);white-space:pre-wrap;line-height:1.6}
+.probe-box .pa{font-size:12.5px;color:var(--ink2);white-space:pre-wrap;line-height:1.65;
+  margin-top:7px;border-top:1px dashed var(--line);padding-top:7px}
+.probe-box .pa .ok-line{color:var(--good)} .probe-box .pa .bad-line{color:var(--bad)}
+.probe-box .btn{margin-top:7px}
+.probe-box img{width:100%;display:block;border:1px solid var(--line);border-radius:6px;margin:5px 0;background:#fff}
+.probe-box .pyear{font-size:11.5px;font-weight:700;color:var(--acc);letter-spacing:.3px;margin-bottom:2px}
+.probe-box .pfocus{font-weight:500;color:var(--warn)}
+.map-grid:has(.probe-box.wide:not([hidden])){grid-template-columns:1fr}
+
+/* ============ 易错本 ============ */
+.err-card{border-left:4px solid var(--warn);background:var(--card);border-radius:0 12px 12px 0;
+  border-top:1px solid var(--line);border-right:1px solid var(--line);border-bottom:1px solid var(--line);
+  padding:13px 16px;margin-bottom:10px}
+.err-card .q{font-weight:650;margin-bottom:6px}
+.err-card .a{font-size:13.5px;color:var(--ink2);white-space:pre-wrap;line-height:1.7}
+.err-card .a .ok-line{color:var(--good)} .err-card .a .bad-line{color:var(--bad)}
+
+/* ============ 帮助 ============ */
+.help pre{background:var(--card2);border-radius:9px;padding:12px 14px;font-size:12px;overflow-x:auto;
+  font-family:"SF Mono",Menlo,Consolas,monospace;line-height:1.6;margin:8px 0}
+.help ol{padding-left:20px}
+.help li{margin:5px 0}
+.theme-toggle{position:fixed;top:14px;right:16px;z-index:60;font-size:17px;background:var(--card);
+  border:1px solid var(--line);border-radius:50%;width:38px;height:38px;box-shadow:var(--shadow)}
+@media(max-width:760px){.theme-toggle{top:10px;right:10px}}
+</style>
+</head>
+<body>
+
+<button class="theme-toggle" id="themeBtn" title="切换深浅色">◐</button>
+<div class="shell">
+  <nav class="side" id="nav"></nav>
+  <main class="main" id="main"></main>
+</div>
+
+<!-- ======= 卡组数据：新增单元/学生 → 在 decks/ 加文件并在下面加一行 ======= -->
+<script src="decks/deck_u1.js"></script>
+<script src="decks/deck_u2.js"></script>
+<script src="decks/deck_demo_u1_errors.js"></script>
+<!-- <script src="decks/deck_u2.js"></script>  ← 新单元示例 -->
+
+<script>
+"use strict";
+/* =================== 数据与存储 =================== */
+const DECKS = window.CHEM_DECKS || [];
+const LS = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v===null? d : JSON.parse(v);}catch(e){return d} },
+  set(k, v){ localStorage.setItem(k, JSON.stringify(v)); }
+};
+const today = () => Math.floor(Date.now() / 864e5);
+function hash(s){ let h=5381; for(let i=0;i<s.length;i++){ h=((h<<5)+h+s.charCodeAt(i))>>>0; } return h.toString(36); }
+function cardKey(deckId, c){ return deckId + ":" + hash(c.front); }
+
+let profiles = LS.get("ck.profiles", ["示例学生"]);
+let profile  = LS.get("ck.profile", profiles[0]);
+let ui = LS.get("ck.ui", { view:"home", deck: DECKS[0] ? DECKS[0].id : "", topics:{}, types:{} });
+function pdata(){ return LS.get("ck.data." + profile, { states:{}, log:{} }); }
+function savePdata(d){ LS.set("ck.data." + profile, d); }
+function saveUi(){ LS.set("ck.ui", ui); }
+
+/* SRS：Leitner 盒 0(新)–5，间隔天数 */
+const INTERVAL = [0, 0, 1, 3, 7, 14];
+function grade(state, g){ // g: 0 again, 1 hard, 2 good
+  const s = state || { b:0, d:0 };
+  if (g === 0) s.b = 1;
+  else if (g === 1) s.b = Math.max(1, s.b);
+  else s.b = Math.min(5, s.b + 1);
+  s.d = today() + INTERVAL[s.b];
+  return s;
+}
+function tierOf(b){ return b >= 4 ? 2 : (b >= 2 ? 1 : 0); } // 0 生疏 1 巩固中 2 掌握
+
+function deckById(id){ return DECKS.find(d => d.id === id) || DECKS[0]; }
+function allCards(deck, topicFilter, typeFilter){
+  const out = [];
+  deck.topics.forEach(t => {
+    if (topicFilter && topicFilter.length && !topicFilter.includes(t.id)) return;
+    t.cards.forEach(c => {
+      if (typeFilter && typeFilter.length && !typeFilter.includes(c.type)) return;
+      out.push({ ...c, topic: t, key: cardKey(deck.id, c) });
+    });
+  });
+  return out;
+}
+
+/* =================== 文本渲染 =================== */
+function esc(s){ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function fmtBack(s){
+  return esc(s).split("\n").map(line => {
+    let cls = "pt";
+    if (line.trim().startsWith("✗")) cls += " bad-line";
+    if (line.trim().startsWith("✓")) cls += " ok-line";
+    return '<span class="' + cls + '">' + line + "</span>";
+  }).join("");
+}
+const TYPE_CN = { concept:"概念", calc:"计算", error:"易错" };
+
+/* =================== 导航 =================== */
+const VIEWS = [
+  ["home","⌂","概览"], ["study","▤","刷卡"], ["terms","Aa","术语"],
+  ["map","◈","地图"], ["errors","!","易错本"], ["help","?","帮助"]
+];
+function renderNav(){
+  const nav = document.getElementById("nav");
+  nav.innerHTML = '<div class="brand"><h1>化学 Anki</h1><small>A-LEVEL 复习台</small></div>' +
+    VIEWS.map(([id, ic, label]) =>
+      '<button class="nav-btn' + (ui.view === id ? " on" : "") + '" data-v="' + id + '">' +
+      '<span class="ic">' + ic + '</span>' + label + "</button>").join("") +
+    '<div class="foot">进度按学生分档存于本机浏览器</div>';
+  nav.querySelectorAll(".nav-btn").forEach(b =>
+    b.onclick = () => { ui.view = b.dataset.v; saveUi(); render(); });
+}
+
+/* =================== 头部选择器 =================== */
+function selectorBar(showDeck){
+  const opts = profiles.map(p => '<option' + (p === profile ? " selected" : "") + '>' + esc(p) + "</option>").join("");
+  const deckOpts = DECKS.map(d => '<option value="' + d.id + '"' + (d.id === ui.deck ? " selected" : "") + '>' + esc(d.title) + "</option>").join("");
+  return '<div class="row" style="margin-bottom:16px">' +
+    '<label class="mut">学生</label><select id="selProfile">' + opts + "</select>" +
+    '<button class="btn sm" id="btnAddProfile">＋新学生</button>' +
+    (showDeck ? '<label class="mut" style="margin-left:8px">卡组</label><select id="selDeck">' + deckOpts + "</select>" : "") +
+    "</div>";
+}
+function wireSelectorBar(){
+  const sp = document.getElementById("selProfile");
+  if (sp) sp.onchange = () => { profile = sp.value; LS.set("ck.profile", profile); render(); };
+  const ap = document.getElementById("btnAddProfile");
+  if (ap) ap.onclick = () => {
+    const name = prompt("新学生姓名：");
+    if (!name || profiles.includes(name)) return;
+    profiles.push(name); LS.set("ck.profiles", profiles);
+    profile = name; LS.set("ck.profile", profile); render();
+  };
+  const sd = document.getElementById("selDeck");
+  if (sd) sd.onchange = () => { ui.deck = sd.value; saveUi(); render(); };
+}
+
+/* =================== 概览 =================== */
+function vHome(){
+  const deck = deckById(ui.deck);
+  if (!deck) return "<p>没有加载到任何卡组——检查 decks/ 目录。</p>";
+  const data = pdata();
+  const cards = allCards(deck);
+  let due = 0, fresh = 0, tiers = [0,0,0];
+  cards.forEach(c => {
+    const st = data.states[c.key];
+    if (!st) { fresh++; tiers[0]++; return; }
+    tiers[tierOf(st.b)]++;
+    if (st.d <= today()) due++;
+  });
+  const mastered = cards.length ? Math.round(tiers[2] / cards.length * 100) : 0;
+  const streakDays = Object.keys(data.log || {}).length;
+
+  let html = '<div class="h2">概览 · ' + esc(profile) + "</div>" + selectorBar(true);
+  html += '<div class="kpis">' +
+    kpi(due + " + " + Math.min(fresh, 20), "今日到期 + 新卡") +
+    kpi(cards.length, "卡组总卡数") +
+    kpi(mastered + "%", "已掌握（≥4 盒）") +
+    kpi(streakDays, "累计学习天数") + "</div>";
+
+  html += '<div class="panel"><div class="h3" style="margin-top:0">各 Topic 掌握度</div>';
+  deck.topics.forEach(t => {
+    const tc = allCards(deck, [t.id]);
+    const tt = [0,0,0];
+    tc.forEach(c => { const st = data.states[c.key]; tt[st ? tierOf(st.b) : 0]++; });
+    const total = tc.length || 1;
+    html += '<div style="margin:10px 0"><div class="row" style="justify-content:space-between">' +
+      "<span><b>" + esc(t.cn) + "</b> <span class='mut'>" + esc(t.title) + "</span></span>" +
+      '<span class="mut" style="font-variant-numeric:tabular-nums">' + tt[2] + " / " + tc.length + " 掌握</span></div>" +
+      '<div class="tbar">' +
+      '<i class="t1" style="width:' + (tt[0]/total*100) + '%" title="生疏 ' + tt[0] + '"></i>' +
+      '<i class="t2" style="width:' + (tt[1]/total*100) + '%" title="巩固中 ' + tt[1] + '"></i>' +
+      '<i class="t3" style="width:' + (tt[2]/total*100) + '%" title="掌握 ' + tt[2] + '"></i></div></div>';
+  });
+  html += '<div class="legend"><span><i style="background:var(--tier1)"></i>生疏</span>' +
+    '<span><i style="background:var(--tier2)"></i>巩固中</span>' +
+    '<span><i style="background:var(--tier3)"></i>掌握</span></div></div>';
+
+  html += '<div class="row" style="margin-top:16px">' +
+    '<button class="btn pri" id="goStudy">▶ 开始今日复习</button>' +
+    '<button class="btn" id="btnExport">导出进度</button>' +
+    '<button class="btn" id="btnImport">导入进度</button></div>';
+  return html;
+}
+function kpi(v, label){ return '<div class="kpi"><b>' + v + "</b><span>" + label + "</span></div>"; }
+
+/* =================== 刷卡 =================== */
+let session = null;
+function buildSession(mode){
+  const deck = deckById(ui.deck);
+  const topicSel = ui.topics[deck.id] || [];
+  const typeSel = ui.types[deck.id] || [];
+  const data = pdata();
+  let cards = allCards(deck, topicSel, typeSel);
+  if (mode === "due"){
+    const dueCards = cards.filter(c => { const st = data.states[c.key]; return st && st.d <= today(); });
+    const freshCards = cards.filter(c => !data.states[c.key]).slice(0, 20);
+    cards = dueCards.concat(freshCards);
+  }
+  for (let i = cards.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [cards[i], cards[j]] = [cards[j], cards[i]]; }
+  session = { queue: cards, i: 0, flipped: false, done: 0, again: 0, mode };
+}
+function vStudy(){
+  const deck = deckById(ui.deck);
+  if (!deck) return "<p>无卡组。</p>";
+  let html = '<div class="h2">刷卡 · ' + esc(deck.title) + "</div>";
+  if (!session){
+    html += selectorBar(true);
+    const topicSel = ui.topics[deck.id] || [];
+    const typeSel = ui.types[deck.id] || [];
+    html += '<div class="panel"><div class="h3" style="margin-top:0">范围（不选 = 全部）</div><div class="row">' +
+      deck.topics.map(t => '<button class="chip' + (topicSel.includes(t.id) ? " on" : "") + '" data-topic="' + t.id + '">' + esc(t.cn) + "</button>").join("") +
+      '</div><div class="row" style="margin-top:10px">' +
+      ["concept","calc","error"].map(ty => '<button class="chip' + (typeSel.includes(ty) ? " on" : "") + '" data-type="' + ty + '">' + TYPE_CN[ty] + "</button>").join("") +
+      "</div>" +
+      '<div class="row" style="margin-top:16px">' +
+      '<button class="btn pri" id="startDue">今日复习（到期 + 20 新卡）</button>' +
+      '<button class="btn" id="startAll">自由刷（范围内全部）</button></div>' +
+      '<p class="mut" style="margin-top:10px">快捷键：<kbd>空格</kbd> 翻面 · <kbd>1</kbd> 不会 <kbd>2</kbd> 模糊 <kbd>3</kbd> 掌握</p></div>';
+    return html;
+  }
+  const q = session.queue;
+  if (session.i >= q.length){
+    html += '<div class="stage"><div class="fc" style="cursor:default"><div class="done-face">' +
+      '<div class="big">✦</div><h3 style="margin:10px 0 6px">本轮完成</h3>' +
+      '<p class="mut">共 ' + session.done + " 张 · 标记「不会」" + session.again + " 张</p>" +
+      '<div class="row" style="justify-content:center;margin-top:18px">' +
+      '<button class="btn pri" id="againRound">再来一轮</button>' +
+      '<button class="btn" id="exitStudy">返回设置</button></div></div></div></div>';
+    return html;
+  }
+  const c = q[session.i];
+  html += '<div class="stage"><div class="sess-bar"><span>' + (session.i + 1) + " / " + q.length + "</span>" +
+    '<div class="pbar"><i style="width:' + (session.i / q.length * 100) + '%"></i></div>' +
+    '<button class="btn sm" id="exitStudy">退出</button></div>';
+  html += '<div class="fc" id="fcard">' +
+    '<div class="side-label">' + (session.flipped ? "答案 · 采分点" : "问题") + "</div>" +
+    (session.flipped
+      ? '<div class="atext">' + fmtBack(c.back) + "</div>"
+      : '<div class="qtext">' + esc(c.front) + "</div>") +
+    '<div class="meta"><span>' + esc(c.topic.cn) + " · " + TYPE_CN[c.type] +
+    (c.tags ? " · " + c.tags.join(" / ") : "") + "</span><span>" + (session.flipped ? "" : "点击翻面") + "</span></div></div>";
+  if (session.flipped){
+    html += '<div class="grades">' +
+      '<button class="btn g-again" data-g="0">不会<br><small class="mut">明天再见</small></button>' +
+      '<button class="btn g-hard" data-g="1">模糊<br><small class="mut">保持间隔</small></button>' +
+      '<button class="btn g-good" data-g="2">掌握<br><small class="mut">拉长间隔</small></button></div>';
+  }
+  html += "</div>";
+  return html;
+}
+function gradeCurrent(g){
+  const c = session.queue[session.i];
+  const data = pdata();
+  data.states[c.key] = grade(data.states[c.key], g);
+  const d = String(today());
+  data.log[d] = (data.log[d] || 0) + 1;
+  savePdata(data);
+  session.done++;
+  if (g === 0){ session.again++; session.queue.push(c); }
+  session.i++; session.flipped = false;
+  render();
+}
+
+/* =================== 术语表 =================== */
+let termBlind = "";  // "" | "en" | "cn"
+function vTerms(){
+  const deck = deckById(ui.deck);
+  if (!deck) return "<p>无卡组。</p>";
+  const topicSel = ui.topics[deck.id] || [];
+  let html = '<div class="h2">英文术语 · 自测表</div>' + selectorBar(true);
+  html += '<div class="panel"><div class="row">' +
+    deck.topics.map(t => '<button class="chip' + (topicSel.includes(t.id) ? " on" : "") + '" data-topic="' + t.id + '">' + esc(t.cn) + "</button>").join("") +
+    '<span style="flex:1"></span>' +
+    '<input id="termSearch" placeholder="搜索…" style="width:140px">' +
+    '<button class="chip' + (termBlind === "cn" ? " on" : "") + '" id="blindCn">遮中文</button>' +
+    '<button class="chip' + (termBlind === "en" ? " on" : "") + '" id="blindEn">遮英文</button></div>';
+  html += '<div class="tbl-wrap" style="margin-top:12px"><table class="term-table"><thead><tr>' +
+    "<th style='width:26%'>English</th><th style='width:18%'>中文</th><th>考试级定义</th><th style='width:12%'>Topic</th></tr></thead><tbody>";
+  deck.topics.forEach(t => {
+    if (topicSel.length && !topicSel.includes(t.id)) return;
+    (t.terms || []).forEach(x => {
+      html += '<tr class="term-row" data-search="' + esc((x.en + x.cn).toLowerCase()) + '">' +
+        '<td class="term-en blindable' + (termBlind === "en" ? " blind" : "") + '"><span>' + esc(x.en) + "</span></td>" +
+        '<td class="blindable' + (termBlind === "cn" ? " blind" : "") + '"><span>' + esc(x.cn) + "</span></td>" +
+        '<td class="term-def">' + esc(x.def) + "</td><td class='mut'>" + esc(t.cn) + "</td></tr>";
+    });
+  });
+  html += "</tbody></table></div><p class='mut' style='margin-top:8px'>自测：点「遮中文」看英文回想中文，或反向。点被遮的格子可单独显示。</p></div>";
+  return html;
+}
+
+/* =================== 知识地图 =================== */
+function vMap(){
+  const deck = deckById(ui.deck);
+  if (!deck) return "<p>无卡组。</p>";
+  let html = '<div class="h2">知识地图 · ' + esc(deck.title) + "</div>" + selectorBar(true);
+  html += '<p class="mut" style="margin-bottom:14px">⚠ 橙色 = 高频丢分点 ｜ 带 <b style="color:var(--acc)">?</b> 的条目点击出自测题；带 📄 的条目点击直接弹出<b>历年真题原题切片</b>（含年份），再点「显示答案」看 MS 原版。都是模考还没考到的点。</p>';
+  let pid = 0;
+  deck.topics.forEach(t => {
+    html += '<div class="map-topic"><div class="h3">' + esc(t.cn) + ' <span class="mut">' + esc(t.title) + "</span></div><div class='map-grid'>";
+    (t.branches || []).forEach(b => {
+      html += '<div class="branch"><h4>' + esc(b.label) + "</h4><ul>" +
+        b.items.map(it => {
+          const isObj = typeof it === "object" && it !== null;
+          const text = isObj ? it.t : it;
+          const hot = text.trim().startsWith("⚠");
+          const shown = esc(text.replace(/^⚠\s*/, ""));
+          if (!isObj || (!it.q && !it.qimg))
+            return '<li class="' + (hot ? "hot" : "") + '">' + shown + "</li>";
+          pid++;
+          const qHtml = it.qimg
+            ? '<div class="pyear">' + esc(it.y || "") + (it.focus ? '　<span class="pfocus">' + esc(it.focus) + "</span>" : "") + "</div>" +
+              it.qimg.map(u => '<img src="' + u + '" loading="lazy" alt="真题切片">').join("")
+            : '<div class="pq">' + fmtBack(it.q) + "</div>";
+          const aHtml = it.aimg
+            ? '<div class="pyear">MS 原版答案</div>' + it.aimg.map(u => '<img src="' + u + '" loading="lazy" alt="MS切片">').join("")
+            : fmtBack(it.a);
+          return '<li class="probe' + (hot ? " hot" : "") + '" data-p="' + pid + '"><span>' + shown +
+            '</span><span class="pq-mark">' + (it.qimg ? "📄" : "?") + '</span></li>' +
+            '<li class="probe-box' + (it.qimg ? " wide" : "") + '" id="pb-' + pid + '" hidden>' + qHtml +
+            '<button class="btn sm" data-r="' + pid + '">显示答案</button>' +
+            '<div class="pa" id="pa-' + pid + '" hidden>' + aHtml + "</div></li>";
+        }).join("") + "</ul></div>";
+    });
+    html += "</div></div>";
+  });
+  return html;
+}
+
+/* =================== 易错本 =================== */
+function vErrors(){
+  const deck = deckById(ui.deck);
+  if (!deck) return "<p>无卡组。</p>";
+  let html = '<div class="h2">易错本 · MS 判死条款汇总</div>' + selectorBar(true);
+  let n = 0;
+  deck.topics.forEach(t => {
+    const errs = t.cards.filter(c => c.type === "error");
+    if (!errs.length) return;
+    html += '<div class="h3">' + esc(t.cn) + "</div>";
+    errs.forEach(c => {
+      n++;
+      html += '<div class="err-card"><div class="q">' + esc(c.front) + '</div><div class="a">' + fmtBack(c.back) + "</div></div>";
+    });
+  });
+  html += '<p class="mut">共 ' + n + ' 条。考前最后 30 分钟就翻这一页。</p>';
+  return html;
+}
+
+/* =================== 帮助 =================== */
+function vHelp(){
+  return '<div class="h2">帮助 · 复用指南</div><div class="panel help">' +
+    '<div class="h3" style="margin-top:0">给下一个 Unit 建卡组</div><ol>' +
+    "<li>复制 <b>decks/deck_u1.js</b> 为 <b>deck_u2.js</b>，按同样结构填内容（id 改成 u2）。</li>" +
+    "<li>在 <b>index.html</b> 中部找到「卡组数据」注释区，加一行 <b>&lt;script src=\"decks/deck_u2.js\"&gt;&lt;/script&gt;</b>。</li>" +
+    "<li>刷新页面，新卡组自动出现在下拉框。</li></ol>" +
+    '<div class="h3">给学生建个性化错题组</div><ol>' +
+    "<li>复制 <b>decks/deck_demo_u1_errors.js</b> 改名（例如 deck_lisi_u2_errors.js）。</li>" +
+    "<li>把判卷发现的错题按「✗ 错误写法 / ✓ 正确写法 / MS 口径」三段式写成 error 卡。</li>" +
+    "<li>同样在 index.html 加一行 script 引用。</li></ol>" +
+    '<div class="h3">数据结构（deck 文件）</div>' +
+    "<pre>window.CHEM_DECKS.push({\n  id: \"u2\", title: \"Unit 2 · …\", exam: \"WCH12\",\n  topics: [{\n    id: \"t6\", title: \"Energetics\", cn: \"能量学\",\n    branches: [{ label: \"分支名\", items: [\"要点\", \"⚠ 高频丢分点\"] }],\n    terms:    [{ en: \"enthalpy change\", cn: \"焓变\", def: \"英文定义\" }],\n    cards:    [{ type: \"concept|calc|error\", front: \"问题\",\n                 back: \"① 采分点\\n② …\", tags: [\"定义背诵\"] }]\n  }]\n});</pre>" +
+    '<div class="h3">学生与进度</div>' +
+    "<li>左上角可切换/新建学生，各自进度独立（存在本机浏览器 localStorage）。</li>" +
+    "<li>换电脑用「概览 → 导出进度」下载 JSON，再在新机器「导入进度」。</li>" +
+    "<li>SRS 规则：掌握 → 间隔 1→3→7→14 天递增；不会 → 回到明天。</li>" +
+    '<div class="h3">日常用法建议</div>' +
+    "<li>学生：每天打开「刷卡 → 今日复习」清零；考前翻「易错本」。</li>" +
+    "<li>老师：上课投屏「知识地图」串讲；「术语表 → 遮中文」当堂听写。</li>" +
+    "</div>";
+}
+
+/* =================== 渲染路由 =================== */
+function render(){
+  renderNav();
+  const main = document.getElementById("main");
+  const v = ui.view;
+  main.innerHTML = v === "home" ? vHome() : v === "study" ? vStudy() : v === "terms" ? vTerms()
+    : v === "map" ? vMap() : v === "errors" ? vErrors() : vHelp();
+  wireSelectorBar();
+
+  main.querySelectorAll("[data-topic]").forEach(b => b.onclick = () => {
+    const deck = deckById(ui.deck);
+    const arr = ui.topics[deck.id] || [];
+    const i = arr.indexOf(b.dataset.topic);
+    i >= 0 ? arr.splice(i, 1) : arr.push(b.dataset.topic);
+    ui.topics[deck.id] = arr; saveUi(); render();
+  });
+  main.querySelectorAll("[data-type]").forEach(b => b.onclick = () => {
+    const deck = deckById(ui.deck);
+    const arr = ui.types[deck.id] || [];
+    const i = arr.indexOf(b.dataset.type);
+    i >= 0 ? arr.splice(i, 1) : arr.push(b.dataset.type);
+    ui.types[deck.id] = arr; saveUi(); render();
+  });
+
+  const go = document.getElementById("goStudy");
+  if (go) go.onclick = () => { ui.view = "study"; saveUi(); buildSession("due"); render(); };
+  const sd = document.getElementById("startDue");
+  if (sd) sd.onclick = () => { buildSession("due"); render(); };
+  const sa = document.getElementById("startAll");
+  if (sa) sa.onclick = () => { buildSession("all"); render(); };
+  const ex = document.getElementById("exitStudy");
+  if (ex) ex.onclick = () => { session = null; render(); };
+  const ar = document.getElementById("againRound");
+  if (ar) ar.onclick = () => { buildSession(session.mode); render(); };
+  const fc = document.getElementById("fcard");
+  if (fc) fc.onclick = () => { session.flipped = !session.flipped; render(); };
+  main.querySelectorAll("[data-g]").forEach(b => b.onclick = e => { e.stopPropagation(); gradeCurrent(+b.dataset.g); });
+
+  main.querySelectorAll(".probe").forEach(li => li.onclick = () => {
+    const box = document.getElementById("pb-" + li.dataset.p);
+    if (box) box.hidden = !box.hidden;
+  });
+  main.querySelectorAll("[data-r]").forEach(b => b.onclick = e => {
+    e.stopPropagation();
+    const pa = document.getElementById("pa-" + b.dataset.r);
+    if (pa) { pa.hidden = false; b.hidden = true; }
+  });
+
+  const ts = document.getElementById("termSearch");
+  if (ts) ts.oninput = () => {
+    const q = ts.value.toLowerCase();
+    main.querySelectorAll(".term-row").forEach(r => r.style.display = r.dataset.search.includes(q) ? "" : "none");
+  };
+  const bc = document.getElementById("blindCn");
+  if (bc) bc.onclick = () => { termBlind = termBlind === "cn" ? "" : "cn"; render(); };
+  const be = document.getElementById("blindEn");
+  if (be) be.onclick = () => { termBlind = termBlind === "en" ? "" : "en"; render(); };
+  main.querySelectorAll(".blindable").forEach(td => td.onclick = () => td.classList.toggle("blind"));
+
+  const exp = document.getElementById("btnExport");
+  if (exp) exp.onclick = () => {
+    const json = JSON.stringify({ profile, data: pdata() });
+    const blob = new Blob([json], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "chemanki-" + profile + ".json";
+    a.click();
+    if (navigator.clipboard) navigator.clipboard.writeText(json).then(
+      () => alert("进度已导出为文件；同时已复制到剪贴板（在线版可粘贴到备忘录保存）"),
+      () => {});
+  };
+  const imp = document.getElementById("btnImport");
+  if (imp) imp.onclick = () => {
+    const inp = document.createElement("input");
+    inp.type = "file"; inp.accept = ".json";
+    inp.onchange = () => {
+      const f = inp.files[0]; if (!f) return;
+      f.text().then(txt => {
+        try{
+          const j = JSON.parse(txt);
+          if (!j.data || !j.data.states) throw 0;
+          savePdata(j.data); alert("已导入 " + Object.keys(j.data.states).length + " 条卡片进度"); render();
+        }catch(e){ alert("文件格式不对"); }
+      });
+    };
+    inp.click();
+  };
+}
+
+/* 键盘 */
+document.addEventListener("keydown", e => {
+  if (ui.view !== "study" || !session || session.i >= session.queue.length) return;
+  if (e.key === " "){ e.preventDefault(); session.flipped = !session.flipped; render(); }
+  if (session.flipped && ["1","2","3"].includes(e.key)) gradeCurrent(+e.key - 1);
+});
+
+/* 主题切换 */
+const themeBtn = document.getElementById("themeBtn");
+const savedTheme = LS.get("ck.theme", "");
+if (savedTheme) document.documentElement.dataset.theme = savedTheme;
+themeBtn.onclick = () => {
+  const cur = document.documentElement.dataset.theme;
+  const next = cur === "dark" ? "light" : "dark";
+  document.documentElement.dataset.theme = next;
+  LS.set("ck.theme", next);
+};
+
+render();
+</script>
+</body>
+</html>

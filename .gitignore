@@ -1,0 +1,10 @@
+# macOS
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+
+# 本地调试
+_shot_*.html
+*.log
+node_modules/
