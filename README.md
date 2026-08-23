@@ -32,7 +32,7 @@ Anki 很好，但对 A-Level 学生有三个不合手的地方，这个工具就
 ## 快速开始
 
 ```bash
-git clone https://github.com/Ronchy2000/alevel-chem-anki.git
+git clone https://github.com/EurusChang/alevel-chem-anki.git
 ```
 
 然后双击 `index.html`（Chrome / Safari / Edge 均可）。
